@@ -480,10 +480,12 @@ def _get_collections_abc_obj_id(node: ast.expr | None) -> str | None:
     >>> _get_collections_abc_obj_id(_ast_node_for('collections.OrderedDict[str, int]')) is None
     True
     """
-    if not isinstance(node, ast.Subscript):
-        return None
-    return _get_name_of_class_if_from_modules(
-        node.value, modules=_TYPING_MODULES | {"collections.abc"}
+    return (
+        _get_name_of_class_if_from_modules(
+            node.value, modules=_TYPING_MODULES | {"collections.abc"}
+        )
+        if isinstance(node, ast.Subscript)
+        else None
     )
 
 
@@ -1197,11 +1199,10 @@ class PyiVisitor(ast.NodeVisitor):
             if isinstance(cmpop, (ast.Lt, ast.GtE)):
                 pass
             elif isinstance(cmpop, (ast.Eq, ast.NotEq)):
-                if can_have_strict_equals is not None:
-                    if len(comparator.elts) != can_have_strict_equals:
-                        self.error(node, Y005.format(n=can_have_strict_equals))
-                else:
+                if can_have_strict_equals is None:
                     self.error(node, Y006)
+                elif len(comparator.elts) != can_have_strict_equals:
+                    self.error(node, Y005.format(n=can_have_strict_equals))
             else:
                 self.error(node, Y006)
 
@@ -1656,8 +1657,7 @@ class PyiTreeChecker:
         if path.suffix == ".pyi":
             yield from _check_for_type_comments(path)
             visitor = PyiVisitor(filename=path)
-            for error in visitor.run(LegacyNormalizer().visit(self.tree)):
-                yield error
+            yield from visitor.run(LegacyNormalizer().visit(self.tree))
 
     @classmethod
     def add_options(cls, parser: OptionManager) -> None:

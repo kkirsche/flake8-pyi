@@ -19,7 +19,7 @@ _version_re = re.compile(r"__version__\s+=\s+(?P<version>.*)")
 
 
 with open(os.path.join(current_dir, "pyi.py"), "r") as f:
-    version = _version_re.search(f.read()).group("version")
+    version = _version_re.search(f.read())["version"]
     version = str(ast.literal_eval(version))
 
 
